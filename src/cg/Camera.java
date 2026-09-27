@@ -72,6 +72,18 @@ public class Camera {
     }
 
     /**
+     * Projeta um ponto em coordenadas de vista (xv, yv, zv) sobre o plano
+     * de projecao a distancia d do foco:
+     *   xs = d * (xv / zv)
+     *   ys = d * (yv / zv)
+     */
+    public Vec2 projetar(Vec3 pontoVista) {
+        double xs = this.d * (pontoVista.getX() / pontoVista.getZ());
+        double ys = this.d * (pontoVista.getY() / pontoVista.getZ());
+        return new Vec2(xs, ys);
+    }
+
+    /**
      Le o arquivo de parametros de camera no formato descrito acima.
      */
     public static Camera loadFromFile(String caminho) throws IOException {

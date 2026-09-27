@@ -56,6 +56,18 @@ public class Vec3 {
         return new Vec3(this.x / length, this.y / length, this.z / length);
     }
 
+    public double getX() {
+        return this.x;
+    }
+
+    public double getY() {
+        return this.y;
+    }
+
+    public double getZ() {
+        return this.z;
+    }
+
     @Override
     public String toString() {
         return "(" + x + ", " + y + ", " + z + ")";
