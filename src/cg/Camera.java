@@ -59,6 +59,19 @@ public class Camera {
     }
 
     /**
+     * Converte um ponto de coordenadas mundiais (p) para coordenadas de vista:
+     *   xv = <P - C, U>
+     *   yv = <P - C, V>
+     *   zv = <P - C, N>
+     */
+    public Vec3 mundoParaVista(Vec3 p) {
+        double xv = p.sub(this.C).dot(this.U);
+        double yv = p.sub(this.C).dot(this.V);
+        double zv = p.sub(this.C).dot(this.N);
+        return new Vec3(xv, yv, zv);
+    }
+
+    /**
      Le o arquivo de parametros de camera no formato descrito acima.
      */
     public static Camera loadFromFile(String caminho) throws IOException {
