@@ -17,6 +17,7 @@ public class Canvas extends JPanel {
         this.buffer = new BufferedImage(width, height, BufferedImage.TYPE_INT_RGB);
         clear(Color.BLACK);
         setPreferredSize(new java.awt.Dimension(width, height));
+        setFocusable(true); // necessario para receber eventos de teclado
     }
 
     public int getWidth2() {
