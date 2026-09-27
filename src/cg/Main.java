@@ -1,30 +1,19 @@
 package cg;
 
-import java.awt.Color;
+import java.awt.event.KeyAdapter;
+import java.awt.event.KeyEvent;
 import java.io.IOException;
+import java.util.Scanner;
 import javax.swing.JFrame;
 
 public class Main {
 
+    private static final String ARQUIVO_MALHA = "objetos/calice2.byu";
+    private static final String ARQUIVO_CAMERA = "camera_exemplo.txt";
+
     public static void main(String[] args) throws IOException {
-        Mesh mesh = Mesh.loadFromFile("malha_exemplo.txt");
-        for (Vec3 v : mesh.vertices) {
-            System.out.println(v);
-        }
-        for (int[] t : mesh.triangulos) {
-            System.out.println(t[0] + " " + t[1] + " " + t[2]);
-        }
-
-        Camera camera = Camera.loadFromFile("camera_exemplo.txt");
-        System.out.println(camera.getC());
-        System.out.println(camera.getN());
-        System.out.println(camera.getV());
-        System.out.println(camera.getD());
-        System.out.println(camera.getHx());
-        System.out.println(camera.getHy());
-
-        int largura = 800;
-        int altura = 600;
+        int largura = 512;
+        int altura = 512;
 
         Canvas canvas = new Canvas(largura, altura);
 
@@ -34,7 +23,74 @@ public class Main {
         frame.pack();
         frame.setLocationRelativeTo(null);
         frame.setVisible(true);
+        canvas.requestFocusInWindow();
 
-        canvas.repaint();
+        Mesh mesh = Mesh.loadFromFile(ARQUIVO_MALHA);
+        Camera camera = Camera.loadFromFile(ARQUIVO_CAMERA);
+        Renderer renderer = new Renderer(canvas, camera, mesh);
+        renderer.desenharMalha();
+
+        // Tecla R recarrega os parametros de camera do arquivo e redesenha,
+        // sem precisar fechar/reabrir a aplicacao (atalho rapido pela janela).
+        canvas.addKeyListener(new KeyAdapter() {
+            @Override
+            public void keyPressed(KeyEvent e) {
+                if (e.getKeyCode() == KeyEvent.VK_R) {
+                    try {
+                        renderer.recarregarCamera(ARQUIVO_CAMERA);
+                        renderer.desenharMalha();
+                    } catch (IOException ex) {
+                        ex.printStackTrace();
+                    }
+                }
+            }
+        });
+
+        // Menu no console, rodando na thread principal em paralelo com a janela grafica
+        Scanner scanner = new Scanner(System.in);
+        boolean rodando = true;
+        while (rodando) {
+            System.out.println("\nMENU");
+            System.out.println("0 - Recarregar camera e redesenhar");
+            System.out.println("1 - Recarregar objeto e redesenhar");
+            System.out.println("2 - Sair");
+            System.out.print("Comando: ");
+
+            if (!scanner.hasNextInt()) {
+                scanner.next(); // descarta entrada invalida
+                System.out.println("Comando invalido.");
+                continue;
+            }
+            int comando = scanner.nextInt();
+
+            switch (comando) {
+                case 0:
+                    try {
+                        renderer.recarregarCamera(ARQUIVO_CAMERA);
+                        renderer.desenharMalha();
+                        System.out.println("Camera recarregada!");
+                    } catch (IOException ex) {
+                        System.out.println("Erro ao recarregar camera: " + ex.getMessage());
+                    }
+                    break;
+                case 1:
+                    try {
+                        renderer.recarregarMalha(ARQUIVO_MALHA);
+                        renderer.desenharMalha();
+                        System.out.println("Objeto recarregado!");
+                    } catch (IOException ex) {
+                        System.out.println("Erro ao recarregar objeto: " + ex.getMessage());
+                    }
+                    break;
+                case 2:
+                    rodando = false;
+                    break;
+                default:
+                    System.out.println("Comando nao identificado.");
+            }
+        }
+
+        scanner.close();
+        System.exit(0);
     }
 }
