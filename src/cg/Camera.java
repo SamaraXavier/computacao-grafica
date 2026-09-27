@@ -83,6 +83,12 @@ public class Camera {
         return new Vec2(xs, ys);
     }
 
+    public Vec2 normalizar(Vec2 pontoProjetado) {
+        double xs = pontoProjetado.getX() / this.hx;
+        double ys = pontoProjetado.getY() / this.hy;
+        return new Vec2(xs, ys);
+    }
+
     /**
      Le o arquivo de parametros de camera no formato descrito acima.
      */
