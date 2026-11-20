@@ -15,7 +15,7 @@ public class Renderer {
     private Camera camera;
     private Mesh mesh;
     private Iluminacao iluminacao;
-    private Vec3 plVista; // posicao da luz em coordenadas de vista (calculada em prepararCena)
+    private Vec3 plVista; // posicao da luz convertida para coordenadas de vista (atribuida em prepararCena)
 
     public Renderer(Canvas canvas, Camera camera, Mesh mesh, Iluminacao iluminacao) {
         this.canvas = canvas;
@@ -55,7 +55,7 @@ public class Renderer {
      */
     private double xNaAresta(int xa, int ya, int xb, int yb, int j) {
         if (ya == yb) {
-            return xa;
+            return xb;
         }
         return xa + (j-ya) * ((double) (xb-xa) / (yb-ya));
     }
@@ -66,12 +66,18 @@ public class Renderer {
      * verticesTela (posicao na tela), verticesVista (posicao em vista).
      */
     public void rasterizarTriangulo(int i0, int i1, int i2) {
-        int[] p0 = verticesTela[i0];
-        int[] p1 = verticesTela[i1];
-        int[] p2 = verticesTela[i2];
         Vec3 v0 = verticesVista[i0];
         Vec3 v1 = verticesVista[i1];
         Vec3 v2 = verticesVista[i2];
+
+        // vertice atras da camera (ou no plano dela)
+        if (v0.getZ() <= 0 || v1.getZ() <= 0 || v2.getZ() <= 0) {
+            return;
+        }
+
+        int[] p0 = verticesTela[i0];
+        int[] p1 = verticesTela[i1];
+        int[] p2 = verticesTela[i2];
 
         int[] topo = p0;
         int[] meio = p1;
@@ -87,14 +93,24 @@ public class Renderer {
             tmp = topo; topo = meio; meio = tmp;
         }
 
-        for (int j = topo[1]; j <= base[1]; j++) {
+        int largura = canvas.getWidth2();
+        int altura = canvas.getHeight2();
+
+        // so as linhas e colunas dentro da tela interessam
+        int jInicio = Math.max(topo[1], 0);
+        int jFim = Math.min(base[1], altura - 1);
+
+        for (int j = jInicio; j <= jFim; j++) {
             double xLonga = xNaAresta(topo[0], topo[1], base[0], base[1], j);
             double xCurta = (j <= meio[1])
                     ? xNaAresta(topo[0], topo[1], meio[0], meio[1], j)
                     : xNaAresta(meio[0], meio[1], base[0], base[1], j);
 
-            int xMin = (int) Math.round(Math.min(xLonga, xCurta));
-            int xMax = (int) Math.round(Math.max(xLonga, xCurta));
+            // o limite eh aplicado antes do (int)
+            long xMinL = Math.round(Math.min(xLonga, xCurta));
+            long xMaxL = Math.round(Math.max(xLonga, xCurta));
+            int xMin = (int) Math.max(0, Math.min(xMinL, largura));
+            int xMax = (int) Math.min(largura - 1, Math.max(xMaxL, -1));
 
             for (int i = xMin; i <= xMax; i++) {
                 double[] bar = coordenadasBaricentricas(i, j, p0, p1, p2);
@@ -108,7 +124,12 @@ public class Renderer {
 
                     if (z < zBuffer[j][i]) {
                         zBuffer[j][i] = z;
-                        canvas.setPixel(i, j, Color.WHITE);
+
+                        Vec3 n = normaisVertices[i0].scale(bar[0])
+                                .add(normaisVertices[i1].scale(bar[1]))
+                                .add(normaisVertices[i2].scale(bar[2]));
+
+                        canvas.setPixel(i, j, calcularCor(p, n));
                     }
                 }
             }
@@ -127,15 +148,41 @@ public class Renderer {
     }
 
     /**
+     * Ordem em que os triangulos serao rasterizados:
+     * pelo z do baricentro de cada triangulo em coordenadas de vista, do mais
+     * proximo da camera (menor z) para o mais distante.
+     *
+     *   zBaricentro(t) = (z do vertice 0 + z do vertice 1 + z do vertice 2) / 3
+     *
+     * Retorna os INDICES dos triangulos (posicoes em mesh.triangulos) nessa ordem.
+     * Usa verticesVista, preparado em prepararCena().
+     */
+    private Integer[] ordenarTriangulosPeloBaricentro() {
+        int n = mesh.triangulos.length;
+
+        double[] zBaricentro = new double[n];
+        Integer[] ordem = new Integer[n];
+        for (int i = 0; i < n; i++) {
+            int[] t = mesh.triangulos[i];
+            zBaricentro[i] = (verticesVista[t[0]].getZ() + verticesVista[t[1]].getZ() + verticesVista[t[2]].getZ()) / 3.0;
+            ordem[i] = i;
+        }
+
+        java.util.Arrays.sort(ordem, (a, b) -> Double.compare(zBaricentro[a], zBaricentro[b]));
+        return ordem;
+    }
+
+    /**
      * Limpa o canvas de preto, prepara a cena e o z-buffer do quadro, e
-     * rasteriza cada triangulo da malha atual.
+     * rasteriza os triangulos da malha atual do mais proximo ao mais distante.
      */
     public void desenharMalha() {
         canvas.clear(Color.BLACK);
         prepararCena();
         prepararZBuffer();
 
-        for (int[] triangulo : mesh.triangulos) {
+        for (int idx : ordenarTriangulosPeloBaricentro()) {
+            int[] triangulo = mesh.triangulos[idx];
             rasterizarTriangulo(triangulo[0], triangulo[1], triangulo[2]);
         }
 
@@ -201,11 +248,14 @@ public class Renderer {
     }
 
     /**
-     * Recarrega os parametros de camera a partir do arquivo, substituindo
-     * a camera atualmente usada pelo renderer
+     * Recarrega os parametros de camera e de iluminacao do arquivo. Le os dois
+     * antes de substituir qualquer um, entao se o arquivo tiver erro nada muda.
      */
-    public void recarregarCamera(String caminhoArquivoCamera) throws IOException {
-        this.camera = Camera.loadFromFile(caminhoArquivoCamera);
+    public void recarregarParametros(String caminhoArquivo) throws IOException {
+        Camera novaCamera = Camera.loadFromFile(caminhoArquivo);
+        Iluminacao novaIluminacao = Iluminacao.loadFromFile(caminhoArquivo);
+        this.camera = novaCamera;
+        this.iluminacao = novaIluminacao;
     }
 
     /**
@@ -291,7 +341,7 @@ public class Renderer {
             verticesTela[i] = vistaParaTela(verticesVista[i]);
         }
 
-        // luz tambem precisa ser convertida
+        // Pl eh dado em coordenadas do mundo; a iluminacao eh calculada em vista, entao ele tambem eh convertido
         plVista = camera.mundoParaVista(iluminacao.getPl());
     }
 

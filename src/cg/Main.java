@@ -9,8 +9,7 @@ import javax.swing.JFrame;
 public class Main {
 
     private static final String ARQUIVO_MALHA = "objetos/calice2.byu";
-    private static final String ARQUIVO_CAMERA = "camera_exemplo.txt";
-    private static final String ARQUIVO_ILUMINACAO = "iluminacao_exemplo.txt";
+    private static final String ARQUIVO_PARAMETROS = "parametros_exemplo.txt"; // camera + iluminacao
 
     public static void main(String[] args) throws IOException {
         int largura = 512;
@@ -27,22 +26,22 @@ public class Main {
         canvas.requestFocusInWindow();
 
         Mesh mesh = Mesh.loadFromFile(ARQUIVO_MALHA);
-        Camera camera = Camera.loadFromFile(ARQUIVO_CAMERA);
-        Iluminacao iluminacao = Iluminacao.loadFromFile(ARQUIVO_ILUMINACAO);
+        Camera camera = Camera.loadFromFile(ARQUIVO_PARAMETROS);
+        Iluminacao iluminacao = Iluminacao.loadFromFile(ARQUIVO_PARAMETROS);
         Renderer renderer = new Renderer(canvas, camera, mesh, iluminacao);
         renderer.desenharMalha();
 
-        // Tecla R recarrega os parametros de camera do arquivo e redesenha,
+        // Tecla R recarrega os parametros de camera e iluminacao do arquivo e redesenha,
         // sem precisar fechar/reabrir a aplicacao (atalho rapido pela janela).
         canvas.addKeyListener(new KeyAdapter() {
             @Override
             public void keyPressed(KeyEvent e) {
                 if (e.getKeyCode() == KeyEvent.VK_R) {
                     try {
-                        renderer.recarregarCamera(ARQUIVO_CAMERA);
+                        renderer.recarregarParametros(ARQUIVO_PARAMETROS);
                         renderer.desenharMalha();
-                    } catch (IOException ex) {
-                        ex.printStackTrace();
+                    } catch (IOException | RuntimeException ex) {
+                        System.out.println("Erro ao recarregar parametros: " + ex.getMessage());
                     }
                 }
             }
@@ -53,7 +52,7 @@ public class Main {
         boolean rodando = true;
         while (rodando) {
             System.out.println("\nMENU");
-            System.out.println("0 - Recarregar camera e redesenhar");
+            System.out.println("0 - Recarregar camera e iluminacao e redesenhar");
             System.out.println("1 - Recarregar objeto e redesenhar");
             System.out.println("2 - Sair");
             System.out.print("Comando: ");
@@ -68,11 +67,11 @@ public class Main {
             switch (comando) {
                 case 0:
                     try {
-                        renderer.recarregarCamera(ARQUIVO_CAMERA);
+                        renderer.recarregarParametros(ARQUIVO_PARAMETROS);
                         renderer.desenharMalha();
-                        System.out.println("Camera recarregada!");
-                    } catch (IOException ex) {
-                        System.out.println("Erro ao recarregar camera: " + ex.getMessage());
+                        System.out.println("Camera e iluminacao recarregadas!");
+                    } catch (IOException | RuntimeException ex) {
+                        System.out.println("Erro ao recarregar parametros: " + ex.getMessage());
                     }
                     break;
                 case 1:

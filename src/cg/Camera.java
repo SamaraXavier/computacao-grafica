@@ -2,6 +2,7 @@ package cg;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.Map;
 import java.util.Scanner;
 
 /**
@@ -90,9 +91,22 @@ public class Camera {
     }
 
     /**
-     Le o arquivo de parametros de camera no formato descrito acima.
+     Le os parametros de camera. Aceita o formato com rotulos ("N = 0 1 -1", em
+     qualquer ordem, ignorando parametros que nao sao da camera) ou o formato
+     posicional descrito acima.
      */
     public static Camera loadFromFile(String caminho) throws IOException {
+        Map<String, double[]> rotulado = ArquivoParametros.ler(caminho);
+        if (!rotulado.isEmpty()) {
+            double[] C = ArquivoParametros.exigir(rotulado, "C", 3);
+            double[] N = ArquivoParametros.exigir(rotulado, "N", 3);
+            double[] V = ArquivoParametros.exigir(rotulado, "V", 3);
+            double d = ArquivoParametros.exigir(rotulado, "d", 1)[0];
+            double hx = ArquivoParametros.exigir(rotulado, "hx", 1)[0];
+            double hy = ArquivoParametros.exigir(rotulado, "hy", 1)[0];
+            return new Camera(new Vec3(C[0], C[1], C[2]), new Vec3(N[0], N[1], N[2]), new Vec3(V[0], V[1], V[2]), d, hx, hy);
+        }
+
         Scanner scanner = new Scanner(new File(caminho));
 
         Vec3 C = new Vec3(scanner.nextDouble(), scanner.nextDouble(), scanner.nextDouble());

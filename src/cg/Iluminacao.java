@@ -2,6 +2,7 @@ package cg;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.Map;
 import java.util.Scanner;
 
 /**
@@ -11,7 +12,7 @@ import java.util.Scanner;
  * Iamb_r Iamb_g Iamb_b (cor da luz ambiental, 0..255)
  * Ka (coeficiente ambiental, 0..1)
  * Il_r Il_g Il_b (cor da luz, 0..255)
- * Plx Ply Plz (posicao da fonte de luz, coordenadas do mundo)
+ * Plx Ply Plz (posicao da fonte de luz, em coordenadas do mundo)
  * Kd_r Kd_g Kd_b (coeficiente difuso, 0..1)
  * Od_r Od_g Od_b (cor difusa do objeto, 0..1)
  * Ks (coeficiente especular, 0..1)
@@ -39,8 +40,26 @@ public class Iluminacao {
         this.eta = eta;
     }
 
-    /** Le o arquivo */
+    /**
+     * Le os parametros de iluminacao. Aceita o formato com rotulos ("Iamb = 100 100 100",
+     * em qualquer ordem, ignorando parametros que nao sao da iluminacao) ou o formato
+     * posicional descrito acima.
+     */
     public static Iluminacao loadFromFile(String caminho) throws IOException {
+        Map<String, double[]> rotulado = ArquivoParametros.ler(caminho);
+        if (!rotulado.isEmpty()) {
+            double[] Iamb = ArquivoParametros.exigir(rotulado, "Iamb", 3);
+            double Ka = ArquivoParametros.exigir(rotulado, "Ka", 1)[0];
+            double[] Il = ArquivoParametros.exigir(rotulado, "Il", 3);
+            double[] Pl = ArquivoParametros.exigir(rotulado, "Pl", 3);
+            double[] Kd = ArquivoParametros.exigir(rotulado, "Kd", 3);
+            double[] Od = ArquivoParametros.exigir(rotulado, "Od", 3);
+            double Ks = ArquivoParametros.exigir(rotulado, "Ks", 1)[0];
+            double eta = ArquivoParametros.exigir(rotulado, "eta", 1)[0];
+            return new Iluminacao(new Vec3(Iamb[0], Iamb[1], Iamb[2]), Ka, new Vec3(Il[0], Il[1], Il[2]),
+                    new Vec3(Pl[0], Pl[1], Pl[2]), new Vec3(Kd[0], Kd[1], Kd[2]), new Vec3(Od[0], Od[1], Od[2]), Ks, eta);
+        }
+
         Scanner scanner = new Scanner(new File(caminho));
 
         Vec3 Iamb = new Vec3(scanner.nextDouble(), scanner.nextDouble(), scanner.nextDouble());
