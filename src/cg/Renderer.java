@@ -176,7 +176,7 @@ public class Renderer {
      * Limpa o canvas de preto, prepara a cena e o z-buffer do quadro, e
      * rasteriza os triangulos da malha atual do mais proximo ao mais distante.
      */
-    public void desenharMalha() {
+    public synchronized void desenharMalha() {
         canvas.clear(Color.BLACK);
         prepararCena();
         prepararZBuffer();
@@ -251,7 +251,7 @@ public class Renderer {
      * Recarrega os parametros de camera e de iluminacao do arquivo. Le os dois
      * antes de substituir qualquer um, entao se o arquivo tiver erro nada muda.
      */
-    public void recarregarParametros(String caminhoArquivo) throws IOException {
+    public synchronized void recarregarParametros(String caminhoArquivo) throws IOException {
         Camera novaCamera = Camera.loadFromFile(caminhoArquivo);
         Iluminacao novaIluminacao = Iluminacao.loadFromFile(caminhoArquivo);
         this.camera = novaCamera;
@@ -262,8 +262,20 @@ public class Renderer {
      * Recarrega a malha a partir do arquivo, substituindo a malha
      * atualmente usada pelo renderer
      */
-    public void recarregarMalha(String caminhoArquivoMalha) throws IOException {
-        this.mesh = Mesh.loadFromFile(caminhoArquivoMalha);
+    public synchronized void recarregarMalha(String caminhoArquivoMalha) throws IOException {
+        Mesh nova = Mesh.loadFromFile(caminhoArquivoMalha);
+
+        // indice de triangulo fora de 1..n quebraria o desenho: nesse caso a malha atual eh mantida
+        for (int[] t : nova.triangulos) {
+            for (int indice : t) {
+                if (indice < 0 || indice >= nova.vertices.length) {
+                    throw new IOException("triangulo com indice de vertice invalido (" + (indice + 1)
+                            + "); os vertices vao de 1 a " + nova.vertices.length);
+                }
+            }
+        }
+
+        this.mesh = nova;
     }
 
     /**

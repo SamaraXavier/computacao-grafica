@@ -79,8 +79,9 @@ public class Main {
                         renderer.recarregarMalha(ARQUIVO_MALHA);
                         renderer.desenharMalha();
                         System.out.println("Objeto recarregado!");
-                    } catch (IOException ex) {
-                        System.out.println("Erro ao recarregar objeto: " + ex.getMessage());
+                    } catch (IOException | RuntimeException ex) {
+                        // RuntimeException: arquivo truncado ou com texto onde deveria haver numero
+                        System.out.println("Erro ao recarregar objeto: " + ex);
                     }
                     break;
                 case 2:

@@ -28,29 +28,28 @@ public class Mesh {
      * Le o arquivo no formato da especificacao e retorna a malha carregada.
      */
     public static Mesh loadFromFile(String caminho) throws IOException {
-        Scanner scanner = new Scanner(new File(caminho));
+        // try-with-resources: o arquivo eh fechado mesmo se a leitura falhar no meio
+        try (Scanner scanner = new Scanner(new File(caminho))) {
+            int n = scanner.nextInt();
+            int k = scanner.nextInt();
 
-        int n = scanner.nextInt();
-        int k = scanner.nextInt();
+            final Vec3[] vertices = new Vec3[n];
 
-        final Vec3[] vertices = new Vec3[n];
-
-        for(int i = 0; i < n; i++) {
-            double x = scanner.nextDouble();
-            double y = scanner.nextDouble();
-            double z = scanner.nextDouble();
-            vertices[i] = new Vec3(x, y, z);
-        }
-
-        final int[][] triangulos = new int[k][3];
-        for(int i = 0; i < k; i++) {
-            for(int j = 0; j < 3; j++) {
-                triangulos[i][j] = scanner.nextInt() - 1;
+            for(int i = 0; i < n; i++) {
+                double x = scanner.nextDouble();
+                double y = scanner.nextDouble();
+                double z = scanner.nextDouble();
+                vertices[i] = new Vec3(x, y, z);
             }
+
+            final int[][] triangulos = new int[k][3];
+            for(int i = 0; i < k; i++) {
+                for(int j = 0; j < 3; j++) {
+                    triangulos[i][j] = scanner.nextInt() - 1;
+                }
+            }
+
+            return new Mesh(vertices, triangulos);
         }
-
-        scanner.close();
-
-        return new Mesh(vertices, triangulos);
     }
 }

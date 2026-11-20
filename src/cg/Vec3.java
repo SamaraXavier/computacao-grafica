@@ -56,9 +56,12 @@ public class Vec3 {
         return sqrt(pow(this.x, 2) + pow(this.y, 2) + pow(this.z, 2));
     }
 
-    /** Vetor normalizado (norma 1): v / ||v|| */
+    /** Vetor normalizado (norma 1): v / ||v||. O vetor nulo nao tem direcao: eh devolvido como esta (evita NaN). */
     public Vec3 normalize() {
         double length = length();
+        if (length == 0) {
+            return this;
+        }
         return new Vec3(this.x / length, this.y / length, this.z / length);
     }
 
