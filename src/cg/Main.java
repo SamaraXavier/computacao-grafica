@@ -10,6 +10,7 @@ public class Main {
 
     private static final String ARQUIVO_MALHA = "objetos/calice2.byu";
     private static final String ARQUIVO_CAMERA = "camera_exemplo.txt";
+    private static final String ARQUIVO_ILUMINACAO = "iluminacao_exemplo.txt";
 
     public static void main(String[] args) throws IOException {
         int largura = 512;
@@ -27,7 +28,8 @@ public class Main {
 
         Mesh mesh = Mesh.loadFromFile(ARQUIVO_MALHA);
         Camera camera = Camera.loadFromFile(ARQUIVO_CAMERA);
-        Renderer renderer = new Renderer(canvas, camera, mesh);
+        Iluminacao iluminacao = Iluminacao.loadFromFile(ARQUIVO_ILUMINACAO);
+        Renderer renderer = new Renderer(canvas, camera, mesh, iluminacao);
         renderer.desenharMalha();
 
         // Tecla R recarrega os parametros de camera do arquivo e redesenha,

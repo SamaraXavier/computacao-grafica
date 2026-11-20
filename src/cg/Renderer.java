@@ -14,11 +14,14 @@ public class Renderer {
     private final Canvas canvas;
     private Camera camera;
     private Mesh mesh;
+    private Iluminacao iluminacao;
+    private Vec3 plVista; // posicao da luz em coordenadas de vista (calculada em prepararCena)
 
-    public Renderer(Canvas canvas, Camera camera, Mesh mesh) {
+    public Renderer(Canvas canvas, Camera camera, Mesh mesh, Iluminacao iluminacao) {
         this.canvas = canvas;
         this.camera = camera;
         this.mesh = mesh;
+        this.iluminacao = iluminacao;
     }
 
     /**
@@ -96,8 +99,17 @@ public class Renderer {
             for (int i = xMin; i <= xMax; i++) {
                 double[] bar = coordenadasBaricentricas(i, j, p0, p1, p2);
                 if (bar != null && bar[0] >= 0 && bar[1] >= 0 && bar[2] >= 0) {
-                    // TODO
-                    canvas.setPixel(i, j, Color.WHITE);
+                    if (i < 0 || i >= canvas.getWidth2() || j < 0 || j >= canvas.getHeight2()) {
+                        continue;
+                    }
+
+                    Vec3 p = v0.scale(bar[0]).add(v1.scale(bar[1])).add(v2.scale(bar[2]));
+                    double z = p.getZ();
+
+                    if (z < zBuffer[j][i]) {
+                        zBuffer[j][i] = z;
+                        canvas.setPixel(i, j, Color.WHITE);
+                    }
                 }
             }
         }
@@ -128,6 +140,64 @@ public class Renderer {
         }
 
         canvas.repaint();
+    }
+
+    /**
+     * Cor RGB do ponto p (coordenadas de vista) com normal n, pelo modelo de
+     * iluminacao de Phong:   I = Ia + Id + Is
+     *
+     *   Ia = Ka * Iamb
+     *   Id = <N,L> * (Kd * Od * Il)  ('*' entre vetores = componente a componente)
+     *   Is = <R,V>^eta * Ks * Il
+     *
+     * Vetores (todos normalizados): N = n, L = plVista - p, V = -p (a camera
+     * esta na origem em coordenadas de vista), R = 2<N,L>N - L.
+     *
+     * Casos especiais:
+     *   - se <N,L> < 0: se <V,N> < 0 entao N = -N (e recalcule <N,L>);
+     *                   senao a luz eh desconsiderada (Id = Is = 0)
+     *   - se <V,R> < 0: a componente especular eh desconsiderada (Is = 0)
+     *   - cada canal de I que passar de 255 vira 255
+     */
+    public Color calcularCor(Vec3 p, Vec3 n) {
+        Vec3 N = n.normalize();
+        Vec3 L = plVista.sub(p).normalize();
+        Vec3 V = p.scale(-1).normalize();
+
+        // Ia = Ka * Iamb
+        Vec3 I = iluminacao.getIamb().scale(iluminacao.getKa());
+
+        double nl = N.dot(L);
+        if (nl < 0) {
+            if (V.dot(N) < 0) {
+                N = N.scale(-1);
+                nl = -nl;
+            } else {
+                return paraCor(I); // luz desconsiderada: so ambiente
+            }
+        }
+
+        // Id = <N,L> * (Kd * Od * Il)
+        Vec3 Id = iluminacao.getKd().mul(iluminacao.getOd()).mul(iluminacao.getIl()).scale(nl);
+        I = I.add(Id);
+
+        // Is = <R,V>^eta * Ks * Il   (so se <V,R> >= 0)
+        Vec3 R = N.scale(2 * nl).sub(L);
+        double rv = R.dot(V);
+        if (rv >= 0) {
+            Vec3 Is = iluminacao.getIl().scale(iluminacao.getKs() * Math.pow(rv, iluminacao.getEta()));
+            I = I.add(Is);
+        }
+
+        return paraCor(I);
+    }
+
+    /** Limita cada canal a 255 e trunca para inteiro. */
+    private Color paraCor(Vec3 i) {
+        int r = (int) Math.min(255, i.getX());
+        int g = (int) Math.min(255, i.getY());
+        int b = (int) Math.min(255, i.getZ());
+        return new Color(r, g, b);
     }
 
     /**
@@ -220,6 +290,9 @@ public class Renderer {
         for (int i = 0; i < n; i++) {
             verticesTela[i] = vistaParaTela(verticesVista[i]);
         }
+
+        // luz tambem precisa ser convertida
+        plVista = camera.mundoParaVista(iluminacao.getPl());
     }
 
     /**
