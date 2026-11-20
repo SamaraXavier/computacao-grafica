@@ -123,4 +123,96 @@ public class Renderer {
     public void recarregarMalha(String caminhoArquivoMalha) throws IOException {
         this.mesh = Mesh.loadFromFile(caminhoArquivoMalha);
     }
+
+    /**
+     * Normal de um triangulo, com os vertices ja em coordenadas de vista:
+     * n = (v2 - v1) x (v3 - v1), normalizada.
+     */
+    public Vec3 normalDoTriangulo(Vec3 v1, Vec3 v2, Vec3 v3) {
+        Vec3 V2SubV1 = v2.sub(v1);
+        Vec3 V3SubV1 = v3.sub(v1);
+
+        Vec3 cross = V2SubV1.cross(V3SubV1);
+
+        return cross.normalize();
+    }
+
+    /**
+     * Normal de cada vertice: soma das normais dos
+     * triangulos que possuem aquele vertice, depois normaliza o resultado.
+     *
+     * verticesVista[i] eh o vertice i da malha ja em coordenadas de vista.
+     */
+    public Vec3[] normaisDosVertices(Vec3[] verticesVista) {
+        Vec3[] somas = new Vec3[verticesVista.length];
+        for (int i = 0; i < somas.length; i++) {
+            somas[i] = new Vec3(0, 0, 0);
+        }
+
+        for (int[] t : mesh.triangulos) {
+            Vec3 n = normalDoTriangulo(verticesVista[t[0]], verticesVista[t[1]], verticesVista[t[2]]);
+            somas[t[0]] = somas[t[0]].add(n);
+            somas[t[1]] = somas[t[1]].add(n);
+            somas[t[2]] = somas[t[2]].add(n);
+        }
+
+        for (int i = 0; i < somas.length; i++) {
+            somas[i] = somas[i].normalize();
+        }
+
+        return somas;
+    }
+
+    // Dados por vertice, recalculados a cada quadro em prepararCena()
+    private Vec3[] verticesVista; // vertice i em coordenadas de vista
+    private Vec3[] normaisVertices;// normal unitaria do vertice i (em vista)
+    private int[][] verticesTela; // vertice i na tela, no formato {i, j}
+
+    /**
+     * Converte um ponto ja em coordenadas de vista para a tela:
+     * projecao em perspectiva -> normalizacao -> coordenadas de tela.
+     */
+    private int[] vistaParaTela(Vec3 pontoVista) {
+        Vec2 pontoProjetado = camera.projetar(pontoVista);
+        Vec2 pontoNormalizado = camera.normalizar(pontoProjetado);
+        return coordenadasDeTela(pontoNormalizado);
+    }
+
+    /**
+     * Prepara os dados da cena para o quadro atual:
+     *   1. verticesVista[i] = camera.mundoParaVista(mesh.vertices[i])
+     *   2. normaisVertices = normaisDosVertices(verticesVista)
+     *   3. verticesTela[i] = vistaParaTela(verticesVista[i])
+     */
+    private void prepararCena() {
+        int n = mesh.vertices.length;
+
+        verticesVista = new Vec3[n];
+        for (int i = 0; i < n; i++) {
+            verticesVista[i] = camera.mundoParaVista(mesh.vertices[i]);
+        }
+
+        normaisVertices = normaisDosVertices(verticesVista);
+
+        verticesTela = new int[n][];
+        for (int i = 0; i < n; i++) {
+            verticesTela[i] = vistaParaTela(verticesVista[i]);
+        }
+    }
+
+    /**
+     * Coordenadas baricentricas {alfa, beta, gama} do pixel (px, py) em
+     * relacao ao triangulo de tela (p1, p2, p3), cada um no formato {i, j}:
+     *
+     *   a = x1-x3   b = x2-x3   c = y1-y3   d = y2-y3
+     *   det  = a*d - b*c
+     *   alfa = (d*(px-x3) - b*(py-y3)) / det
+     *   beta = (-c*(px-x3) + a*(py-y3)) / det
+     *   gama = 1 - alfa - beta
+     *
+     */
+    public double[] coordenadasBaricentricas(int px, int py, int[] p1, int[] p2, int[] p3) {
+        // TODO
+        return null;
+    }
 }
