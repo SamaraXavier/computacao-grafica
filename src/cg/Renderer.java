@@ -58,10 +58,18 @@ public class Renderer {
     }
 
     /**
-     * Rasteriza (preenche de branco) um triangulo cujos 3 vertices ja
-     * estao em coordenadas de tela: p0, p1, p2, cada um no formato {i, j}.
+     * Rasteriza o triangulo formado pelos vertices de indices i0, i1, i2
+     * Usa os dados preparados em prepararCena():
+     * verticesTela (posicao na tela), verticesVista (posicao em vista).
      */
-    public void rasterizarTriangulo(int[] p0, int[] p1, int[] p2) {
+    public void rasterizarTriangulo(int i0, int i1, int i2) {
+        int[] p0 = verticesTela[i0];
+        int[] p1 = verticesTela[i1];
+        int[] p2 = verticesTela[i2];
+        Vec3 v0 = verticesVista[i0];
+        Vec3 v1 = verticesVista[i1];
+        Vec3 v2 = verticesVista[i2];
+
         int[] topo = p0;
         int[] meio = p1;
         int[] base = p2;
@@ -86,23 +94,37 @@ public class Renderer {
             int xMax = (int) Math.round(Math.max(xLonga, xCurta));
 
             for (int i = xMin; i <= xMax; i++) {
-                canvas.setPixel(i, j, Color.WHITE);
+                double[] bar = coordenadasBaricentricas(i, j, p0, p1, p2);
+                if (bar != null && bar[0] >= 0 && bar[1] >= 0 && bar[2] >= 0) {
+                    // TODO
+                    canvas.setPixel(i, j, Color.WHITE);
+                }
             }
         }
     }
 
+    // z-buffer: zBuffer[j][i] = menor profundidade (z em vista) ja desenhada no pixel (i, j)
+    private double[][] zBuffer;
+
+    /** Aloca o z-buffer do tamanho da tela e inicializa tudo com +infinito. */
+    private void prepararZBuffer() {
+        zBuffer = new double[canvas.getHeight2()][canvas.getWidth2()];
+        for (double[] linha : zBuffer) {
+            java.util.Arrays.fill(linha, Double.POSITIVE_INFINITY);
+        }
+    }
+
     /**
-     * Limpa o canvas de preto, e para cada triangulo da malha atual,
-     * transforma seus 3 vertices (mundo -> tela) e rasteriza o triangulo resultante
+     * Limpa o canvas de preto, prepara a cena e o z-buffer do quadro, e
+     * rasteriza cada triangulo da malha atual.
      */
     public void desenharMalha() {
         canvas.clear(Color.BLACK);
+        prepararCena();
+        prepararZBuffer();
 
         for (int[] triangulo : mesh.triangulos) {
-            int[] p0 = transformarVertice(mesh.vertices[triangulo[0]]);
-            int[] p1 = transformarVertice(mesh.vertices[triangulo[1]]);
-            int[] p2 = transformarVertice(mesh.vertices[triangulo[2]]);
-            rasterizarTriangulo(p0, p1, p2);
+            rasterizarTriangulo(triangulo[0], triangulo[1], triangulo[2]);
         }
 
         canvas.repaint();
@@ -212,7 +234,23 @@ public class Renderer {
      *
      */
     public double[] coordenadasBaricentricas(int px, int py, int[] p1, int[] p2, int[] p3) {
-        // TODO
-        return null;
+        double a = p1[0] - p3[0];
+        double b = p2[0] - p3[0];
+        double c = p1[1] - p3[1];
+        double d = p2[1] - p3[1];
+
+        double det = a * d - b * c;
+        if (det == 0) {
+            return null;
+        }
+
+        double dx = px - p3[0];
+        double dy = py - p3[1];
+
+        double alfa = (d * dx - b * dy) / det;
+        double beta = (-c * dx + a * dy) / det;
+        double gama = 1 - alfa - beta;
+
+        return new double[]{alfa, beta, gama};
     }
 }
