@@ -12,7 +12,7 @@ import java.util.Scanner;
  * Iamb_r Iamb_g Iamb_b (cor da luz ambiental, 0..255)
  * Ka (coeficiente ambiental, 0..1)
  * Il_r Il_g Il_b (cor da luz, 0..255)
- * Plx Ply Plz (posicao da fonte de luz, em coordenadas do mundo)
+ * Plx Ply Plz (posicao da fonte de luz, em coordenadas de vista)
  * Kd_r Kd_g Kd_b (coeficiente difuso, 0..1)
  * Od_r Od_g Od_b (cor difusa do objeto, 0..1)
  * Ks (coeficiente especular, 0..1)

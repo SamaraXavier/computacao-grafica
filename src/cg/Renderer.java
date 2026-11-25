@@ -15,7 +15,7 @@ public class Renderer {
     private Camera camera;
     private Mesh mesh;
     private Iluminacao iluminacao;
-    private Vec3 plVista; // posicao da luz convertida para coordenadas de vista (atribuida em prepararCena)
+    private Vec3 plVista; // posicao da luz em coordenadas de vista (atribuida em prepararCena)
 
     public Renderer(Canvas canvas, Camera camera, Mesh mesh, Iluminacao iluminacao) {
         this.canvas = canvas;
@@ -239,11 +239,11 @@ public class Renderer {
         return paraCor(I);
     }
 
-    /** Limita cada canal a 255 e trunca para inteiro. */
+    /** Limita cada canal a 255 e arredonda para o inteiro mais proximo. */
     private Color paraCor(Vec3 i) {
-        int r = (int) Math.min(255, i.getX());
-        int g = (int) Math.min(255, i.getY());
-        int b = (int) Math.min(255, i.getZ());
+        int r = (int) Math.round(Math.min(255, i.getX()));
+        int g = (int) Math.round(Math.min(255, i.getY()));
+        int b = (int) Math.round(Math.min(255, i.getZ()));
         return new Color(r, g, b);
     }
 
@@ -279,14 +279,18 @@ public class Renderer {
     }
 
     /**
-     * Normal de um triangulo, com os vertices ja em coordenadas de vista:
-     * n = (v2 - v1) x (v3 - v1), normalizada.
+     * Normal de um triangulo, com os vertices ja em coordenadas de vista,
+     * apontando para FORA do objeto: n = (v3 - v1) x (v2 - v1), normalizada.
+     *
+     * A ordem eh essa porque a mudanca mundo -> vista inverte a orientacao
+     * (det[U V N] = -1, como num espelho): em vista, (v2 - v1) x (v3 - v1)
+     * apontaria para dentro nos objetos fornecidos.
      */
     public Vec3 normalDoTriangulo(Vec3 v1, Vec3 v2, Vec3 v3) {
         Vec3 V2SubV1 = v2.sub(v1);
         Vec3 V3SubV1 = v3.sub(v1);
 
-        Vec3 cross = V2SubV1.cross(V3SubV1);
+        Vec3 cross = V3SubV1.cross(V2SubV1);
 
         return cross.normalize();
     }
@@ -353,8 +357,8 @@ public class Renderer {
             verticesTela[i] = vistaParaTela(verticesVista[i]);
         }
 
-        // Pl eh dado em coordenadas do mundo; a iluminacao eh calculada em vista, entao ele tambem eh convertido
-        plVista = camera.mundoParaVista(iluminacao.getPl());
+        // Pl ja eh dado em coordenadas de vista: eh usado direto, sem conversao
+        plVista = iluminacao.getPl();
     }
 
     /**
