@@ -17,7 +17,7 @@ public class Main {
 
         Canvas canvas = new Canvas(largura, altura);
 
-        JFrame frame = new JFrame("Computacao Grafica Basica - 1a VA");
+        JFrame frame = new JFrame("Computacao Grafica Basica - 2a VA");
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         frame.add(canvas);
         frame.pack();
